@@ -1,0 +1,14 @@
+pong with square ball
+asteroids
+space invaders
+doom?
+rope simulation
+rope game
+snake
+MS paint tool
+NOSnake (snake with slow-motion)
+
+FFmpeg
+Use OpenGL directly (glfw library)
+Maybe use Vulkan someday
+System calls and multithreading
