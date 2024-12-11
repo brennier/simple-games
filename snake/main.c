@@ -2,7 +2,7 @@
 #include "raymath.h"
 #include <stdlib.h>
 #include <stdio.h> 
-#include <math.h>
+#include <time.h>
 
 #define MAX_SNAKE_LENGTH 100
 #define LIGHTGREEN (Color){ 120, 255, 120, 255 }
@@ -13,22 +13,6 @@ enum mode {
     NORMAL,
     SLOWMO,
 };
-
-int max(int a, int b)
-{
-    return (a > b) ? a : b;
-}
-
-int min(int a, int b)
-{
-    return (a > b) ? a : b;
-}
-
-double distance(Vector2 vec1, Vector2 vec2) {
-    double xdiff = (vec2.x - vec1.x);
-    double ydiff = (vec2.y - vec1.y);
-    return sqrt(xdiff * xdiff + ydiff * ydiff);
-}
 
 enum Directions {
     RIGHT,
@@ -57,37 +41,47 @@ void drawSnake(Snake snake) {
     }
 }
 
-Snake updateSnake(Snake snake) {
-    for (int i = snake.length - 1; i >= 0; i--)
-        snake.positions[i+1] = snake.positions[i];
-    switch (snake.direction) {
+void updateSnake(Snake* snake) {
+    for (int i = snake->length - 1; i >= 0; i--)
+        snake->positions[i+1] = snake->positions[i];
+    switch (snake->direction) {
         case UP:
-            snake.positions[0] = Vector2Add(snake.positions[1], (Vector2){0,-1});
+            snake->positions[0] = Vector2Add(snake->positions[1], (Vector2){0,-1});
             break;
         case DOWN:
-            snake.positions[0] = Vector2Add(snake.positions[1], (Vector2){0,1});
+            snake->positions[0] = Vector2Add(snake->positions[1], (Vector2){0,1});
             break;
         case LEFT:
-            snake.positions[0] = Vector2Add(snake.positions[1], (Vector2){-1,0});
+            snake->positions[0] = Vector2Add(snake->positions[1], (Vector2){-1,0});
             break;
         case RIGHT:
-            snake.positions[0] = Vector2Add(snake.positions[1], (Vector2){1,0});
+            snake->positions[0] = Vector2Add(snake->positions[1], (Vector2){1,0});
             break;
     }
-    return snake;
+}
+
+Vector2 snakeHead(Snake snake) {
+    return snake.positions[0];
+}
+
+int snakeIntersects(Snake snake) {
+    for (int i = 1; i < snake.length; i++)
+        if (Vector2Equals(snake.positions[0], snake.positions[i]))
+            return true;
+    return false;
 }
 
 int main() {
-    srand(0);
+    srand(time(NULL));
     enum mode mode = NORMAL;
     char message[200];
     int frameCounter = 0;
+    int powerup = 100;
     Vector2 apple = (Vector2){ rand() % 50, rand() % 40 + 10 };
     Snake snake;
-    int powerup = 100;
+    snake.positions[0] = (Vector2){25, 25};
     snake.direction = UP;
     snake.length = 1;
-    snake.positions[0] = (Vector2){25, 25};
 
     InitWindow(screenWidth, screenHeight, "Snake");
     SetTargetFPS(60);
@@ -111,30 +105,31 @@ int main() {
 
         if (mode == SLOWMO && frameCounter % 8 == 0)
         {
-            snake = updateSnake(snake);
+            updateSnake(&snake);
             powerup -= 2;
         }
         
         if (mode == NORMAL && frameCounter % 2 == 0)
         {
-            snake = updateSnake(snake);
+            updateSnake(&snake);
             if (powerup < 100)
                 powerup++;
         }
+
+        if (snakeIntersects(snake))
+            break;
         
-        if (Vector2Equals(snake.positions[0], apple))
+        if (Vector2Equals(snakeHead(snake), apple))
         {
             apple = (Vector2){ rand() % 50, rand() % 40 + 10 };
             snake.length++;
         }
 
-        if (screenWidth / 16 == snake.positions[0].x ||
-            snake.positions[0].x < 0 ||
-            screenHeight / 16 < snake.positions[0].y ||
-            snake.positions[0].y < 0)
-        {
+        // Check if snake head is out of bounds
+        if (screenWidth / 16 <= snakeHead(snake).x || snakeHead(snake).x < 0)
             break;
-        }
+        else if (screenHeight / 16 <= snakeHead(snake).y || snakeHead(snake).y < 0)
+            break;
 
         BeginDrawing();
         ClearBackground(GREEN);
@@ -159,7 +154,6 @@ int main() {
         BeginDrawing();
         ClearBackground(GREEN);
         drawSnake(snake);
-        DrawRectangle(apple.x * 16, apple.y * 16, 16, 16, RED);
         sprintf(message, "Final score: %03d", snake.length);
         DrawText(message, screenWidth / 2 - 16*16, screenHeight / 2, 64, BLACK);
         EndDrawing();
