@@ -1,9 +1,9 @@
 #include <raylib.h>
 #include "raymath.h"
 #include <stdlib.h>
-#include <stdio.h> 
 #include <time.h>
 
+#define M_PI 3.14159265358979323846  /* pi */
 #define SCREENWIDTH 1600
 #define SCREENHEIGHT 640
 #define MAPSIZE 640
@@ -17,25 +17,34 @@
 #define MAPYOFFSET ( (SCREENHEIGHT - MAPSIZE) / 2 )
 #define HALFVIEWANGLE (VIEWANGLE / 2)
 
-const int map[20][20] = {
+enum Quadrant {
+    UP_RIGHT,
+    UP_LEFT,
+    DOWN_LEFT,
+    DOWN_RIGHT,
+};
+
+typedef enum Quadrant Quadrant;
+
+const int map[MAPSIZE / BLOCKSIZE][MAPSIZE / BLOCKSIZE] = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
     {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+    {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1},
+    {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+    {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+    {1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1},
     {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 };
@@ -66,7 +75,15 @@ void drawPlayer(Player player) {
     // DrawLineV(player.pos, Vector2Add(player.pos, Vector2Scale(player.angle, player.size * 3)), YELLOW);
 }
 
+bool isInMap(Vector2 pixel_pos) {
+    return 0 < pixel_pos.x && pixel_pos.x < MAPSIZE
+        && MAPYOFFSET < pixel_pos.y
+        && pixel_pos.y < SCREENHEIGHT - MAPYOFFSET;
+}
+
 bool isBlock(Vector2 pixel_pos) {
+    if (!isInMap(pixel_pos))
+        return false;
     if (pixel_pos.x > MAPSIZE)
         return 0;
     int block_column = pixel_pos.x / BLOCKSIZE;
@@ -89,12 +106,6 @@ bool isInBlock(Player player) {
 bool isInWindow(Vector2 pixel_pos) {
     return 0 < pixel_pos.x && pixel_pos.x < SCREENWIDTH
         && 0 < pixel_pos.y && pixel_pos.y < SCREENHEIGHT;
-}
-
-bool isInMap(Vector2 pixel_pos) {
-    return 0 < pixel_pos.x && pixel_pos.x < MAPSIZE
-        && MAPYOFFSET < pixel_pos.y
-        && pixel_pos.y < SCREENHEIGHT - MAPYOFFSET;
 }
 
 bool playerInBlock(Vector2 next_pos, int size) {
@@ -126,51 +137,79 @@ Player movePlayer(Player player) {
     return player;
 }
 
+int roundToBlockSize(float number) {
+    return BLOCKSIZE * ((int)(number + BLOCKSIZE / 2) / BLOCKSIZE);
+}
+
+// This will return a Vector3 of the form {end_point.x, end_point.y, wall_type}
 Vector3 rayEndPoint(Player player, float angle_offset) {
-    Vector2 angle = Vector2Rotate(player.angle, DEG2RAD * angle_offset);
-    float angle_degrees = RAD2DEG * Vector2Angle(angle, (Vector2){1.0, 0.0});
+    Vector2 angle = Vector2Rotate(player.angle, angle_offset);
+    float absolute_angle = Vector2Angle(angle, (Vector2){1.0, 0.0});
     Vector2 first_vertical_wall = player.pos;
     Vector2 first_horizontal_wall = player.pos;
+    Quadrant facing;
 
-    if (90 <= angle_degrees || angle_degrees < -90)
+    if (0 <= absolute_angle && absolute_angle < M_PI / 2)
+        facing = UP_RIGHT;
+    else if (0 <= absolute_angle && absolute_angle < M_PI)
+        facing = UP_LEFT;
+    else if (- M_PI / 2 <= absolute_angle && absolute_angle < 0)
+        facing = DOWN_RIGHT;
+    else
+        facing = DOWN_LEFT;
+
+    if (facing == UP_LEFT || facing == DOWN_LEFT)
     {
         first_vertical_wall.x = player.pos.x - ((int)player.pos.x % BLOCKSIZE);
-        first_vertical_wall.y = player.pos.y + tan(DEG2RAD * angle_degrees) * ((int)player.pos.x % BLOCKSIZE);
+        first_vertical_wall.y = player.pos.y + tan(absolute_angle) * ((int)player.pos.x % BLOCKSIZE);
         first_vertical_wall = Vector2Add(first_vertical_wall, (Vector2){-1,0});
-        Vector2 delta = (Vector2){ - BLOCKSIZE, tan(DEG2RAD * angle_degrees) * BLOCKSIZE};
+        Vector2 delta = (Vector2){ - BLOCKSIZE, tan(absolute_angle) * BLOCKSIZE};
 
         while (isInMap(first_vertical_wall) && !isBlockFuzzy(first_vertical_wall))
             first_vertical_wall = Vector2Add(first_vertical_wall, delta);
+        first_vertical_wall = Vector2Add(first_vertical_wall, (Vector2){1,0});
     }
     else
     {
         first_vertical_wall.x = player.pos.x + (BLOCKSIZE - ((int)player.pos.x % BLOCKSIZE));
-        first_vertical_wall.y = player.pos.y - tan(DEG2RAD * angle_degrees) * (BLOCKSIZE - ((int)player.pos.x % BLOCKSIZE));
-        Vector2 delta = (Vector2){ BLOCKSIZE, - tan(DEG2RAD * angle_degrees) * BLOCKSIZE};
+        first_vertical_wall.y = player.pos.y - tan(absolute_angle) * (BLOCKSIZE - ((int)player.pos.x % BLOCKSIZE));
+        Vector2 delta = (Vector2){ BLOCKSIZE, - tan(absolute_angle) * BLOCKSIZE};
 
         while (isInMap(first_vertical_wall) && !isBlockFuzzy(first_vertical_wall))
             first_vertical_wall = Vector2Add(first_vertical_wall, delta);
+        first_vertical_wall = Vector2Add(first_vertical_wall, (Vector2){-1,0});
     }
 
-    if (0 <= angle_degrees && angle_degrees <= 180)
+    if (facing == UP_LEFT || facing == UP_RIGHT)
     {
         first_horizontal_wall.y = player.pos.y - ((int)player.pos.y % BLOCKSIZE);
-        first_horizontal_wall.x = player.pos.x - tan(DEG2RAD * (angle_degrees - 90)) * ((int)player.pos.y % BLOCKSIZE);
+        first_horizontal_wall.x = player.pos.x - tan(absolute_angle - M_PI / 2) * ((int)player.pos.y % BLOCKSIZE);
         first_horizontal_wall = Vector2Add(first_horizontal_wall, (Vector2){0, -1});
-        Vector2 delta = (Vector2){ - tan(DEG2RAD * (angle_degrees - 90)) * BLOCKSIZE, - BLOCKSIZE};
+        Vector2 delta = (Vector2){ - tan(absolute_angle - M_PI / 2) * BLOCKSIZE, - BLOCKSIZE};
 
         while (isInMap(first_horizontal_wall) && !isBlockFuzzy(first_horizontal_wall))
             first_horizontal_wall = Vector2Add(first_horizontal_wall, delta);
+        first_horizontal_wall = Vector2Add(first_horizontal_wall, (Vector2){0, 1});
     }
     else
     {
         first_horizontal_wall.y = player.pos.y + (BLOCKSIZE - ((int)player.pos.y % BLOCKSIZE));
-        first_horizontal_wall.x = player.pos.x + tan(DEG2RAD * (angle_degrees - 90)) * (BLOCKSIZE - ((int)player.pos.y % BLOCKSIZE));
-        Vector2 delta = (Vector2){ tan(DEG2RAD * (angle_degrees - 90)) * BLOCKSIZE, BLOCKSIZE};
+        first_horizontal_wall.x = player.pos.x + tan(absolute_angle - M_PI / 2) * (BLOCKSIZE - ((int)player.pos.y % BLOCKSIZE));
+        Vector2 delta = (Vector2){ tan(absolute_angle - M_PI / 2) * BLOCKSIZE, BLOCKSIZE};
 
         while (isInMap(first_horizontal_wall) && !isBlockFuzzy(first_horizontal_wall))
             first_horizontal_wall = Vector2Add(first_horizontal_wall, delta);
+        first_vertical_wall = Vector2Add(first_vertical_wall, (Vector2){0,-1});
     }
+
+    // This is very hacky way to fix the inaccuracy of the algorithm. The algorithm should be rewritten from scratch.
+    if (isBlock(Vector2Add(first_horizontal_wall, (Vector2){ (facing == UP_RIGHT || facing == DOWN_RIGHT) ? 1 : -1, -5.0}))
+     && isBlock(Vector2Add(first_horizontal_wall, (Vector2){ (facing == UP_RIGHT || facing == DOWN_RIGHT) ? 1 : -1, +5.0})))
+        return (Vector3){first_vertical_wall.x, first_vertical_wall.y, 0};
+
+    if (isBlock(Vector2Add(first_vertical_wall, (Vector2){ -5.0, (facing == UP_LEFT || facing == UP_RIGHT) ? -1 : 2}))
+     && isBlock(Vector2Add(first_vertical_wall, (Vector2){ +5.0, (facing == UP_LEFT || facing == UP_RIGHT) ? -1 : 2})))
+        return (Vector3){first_horizontal_wall.x, first_horizontal_wall.y, 1};
 
     if (Vector2Distance(player.pos, first_horizontal_wall) < Vector2Distance(player.pos, first_vertical_wall))
         return (Vector3){first_horizontal_wall.x, first_horizontal_wall.y, 1};
@@ -180,19 +219,18 @@ Vector3 rayEndPoint(Player player, float angle_offset) {
 
 // Simple version, not in use
 Vector2 rayEndPointSimple(Player player, float angle_offset) {
-    Vector2 angle = Vector2Rotate(player.angle, DEG2RAD * angle_offset);
+    Vector2 angle = Vector2Rotate(player.angle, angle_offset);
     Vector2 end_point = player.pos;
     while (!isBlock(end_point) && isInMap(end_point))
         end_point = Vector2Add(end_point, angle);
     return end_point;
 }
 
-void drawColumn(float block_distance, float angle, Color color) {
+void drawColumn(float block_distance, int view_column, Color color) {
     int view_width = (SCREENWIDTH - MAPSIZE);
     int view_center = MAPSIZE + (view_width / 2);
-    int column_offset = (RAYNUMBER / 2) * (angle / HALFVIEWANGLE);
+    int column_offset = view_column - (RAYNUMBER / 2);
 
-    block_distance *= cos(DEG2RAD * angle); // correct for fish eye effect
     int column_height = SCREENHEIGHT / block_distance;
     int yOffSet = (SCREENHEIGHT - column_height) / 2;
 
@@ -221,9 +259,8 @@ int main() {
     player.angle = (Vector2){0.0, -1.0};
     player.speed = 2;
     player.size = 8;
-    Vector2 ray_end_points[RAYNUMBER];
-    bool ray_hit_horizontal[RAYNUMBER];
-    bool ray_hit_horizontal_normalized[RAYNUMBER];
+    Vector2 ray_end_point;
+    bool ray_hit_horizontal;
 
     InitWindow(SCREENWIDTH, SCREENHEIGHT, "Raycaster");
     SetTargetFPS(60);
@@ -237,62 +274,26 @@ int main() {
         drawMap();
         drawPlayer(player);
 
-        for (int i = 0; i < RAYNUMBER; i++)
+        for (int view_column = 0; view_column < RAYNUMBER; view_column++)
         {
-            float angle = - HALFVIEWANGLE + VIEWANGLE * i / RAYNUMBER;
+            float angle = - HALFVIEWANGLE + VIEWANGLE * view_column / RAYNUMBER;
+            angle *= DEG2RAD;
             Vector3 result = rayEndPoint(player, angle);
-            ray_end_points[i] = (Vector2){ result.x, result.y };
-            ray_hit_horizontal[i] = result.z;
-        }
+            ray_end_point = (Vector2){ result.x, result.y };
+            ray_hit_horizontal = result.z;
+    
+            float distance = Vector2Distance(player.pos, ray_end_point);
+            distance *= cos(angle); // correct for fish eye effect
+            float block_distance = (distance / BLOCKSIZE);
+            
+            if (view_column % 4 == 0)
+                DrawLineV(Vector2Add(player.pos, Vector2Scale(Vector2Rotate(player.angle, angle), player.size)), ray_end_point, RED);
 
-        ray_hit_horizontal_normalized[0] = ray_hit_horizontal[0];
-        ray_hit_horizontal_normalized[1] = ray_hit_horizontal[1];
-        ray_hit_horizontal_normalized[RAYNUMBER-1] = ray_hit_horizontal[RAYNUMBER-1];
-        ray_hit_horizontal_normalized[RAYNUMBER-2] = ray_hit_horizontal[RAYNUMBER-2];
-        for (int i = 2; i < RAYNUMBER-2; i++)
-        {
-            int horizontal_hits = ray_hit_horizontal[i-2] + ray_hit_horizontal[i-1] + ray_hit_horizontal[i] + ray_hit_horizontal[i+1] + ray_hit_horizontal[i+2];
-            if (horizontal_hits >= 3)
-                ray_hit_horizontal_normalized[i] = true;
+            if (ray_hit_horizontal)
+                drawColumn(distance / BLOCKSIZE, view_column, (Color){0, Clamp((int)(255.0 / block_distance), 0, 200),0,255});
             else
-                ray_hit_horizontal_normalized[i] = false;
+                drawColumn(distance / BLOCKSIZE, view_column, (Color){0, Clamp((int)(512.0 / block_distance), 0,255),0,255});
         }
-
-        for (int i = 0; i < RAYNUMBER; i++)
-        {
-            float angle = - HALFVIEWANGLE + VIEWANGLE * i / RAYNUMBER;
-            float distance = Vector2Distance(player.pos, ray_end_points[i]);
-            if (ray_hit_horizontal_normalized[i])
-            {
-                DrawLineV(Vector2Add(player.pos, Vector2Scale(Vector2Rotate(player.angle, DEG2RAD * angle), player.size)), ray_end_points[i], RED);
-                drawColumn(distance / BLOCKSIZE, angle, DARKGREEN);
-            }
-            else
-            {
-                DrawLineV(Vector2Add(player.pos, Vector2Scale(Vector2Rotate(player.angle, DEG2RAD * angle), player.size)), ray_end_points[i], RED);
-                drawColumn(distance / BLOCKSIZE, angle, GREEN);
-            }
-        }
-
-        //for (float angle = - HALFVIEWANGLE; angle <= HALFVIEWANGLE; angle+= VIEWANGLE / RAYNUMBER)
-        //{
-        //    int wall_type;
-        //    Vector3 hit_location = rayEndPoint(player, angle);
-        //    Vector2 end_point = rayEndPointSimple(player, angle);
-        //    wall_type = hit_location.z;
-
-        //    float distance = Vector2Distance(player.pos, end_point);
-        //    if (wall_type)
-        //    {
-        //        DrawLineV(Vector2Add(player.pos, Vector2Scale(Vector2Rotate(player.angle, DEG2RAD * angle), player.size)), end_point, GREEN);
-        //        drawColumn(distance / BLOCKSIZE, angle, GREEN);
-        //    }
-        //    else
-        //    {
-        //        DrawLineV(Vector2Add(player.pos, Vector2Scale(Vector2Rotate(player.angle, DEG2RAD * angle), player.size)), end_point, DARKGREEN);
-        //        drawColumn(distance / BLOCKSIZE, angle, DARKGREEN);
-        //    }
-        //}
 
         DrawFPS(10, 10);
         EndDrawing();
