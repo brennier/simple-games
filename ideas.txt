@@ -1,12 +1,34 @@
-pong with square ball
 asteroids
 space invaders
 doom?
 rope simulation
+cloth simulation:  https://github.com/NiklasWicklund/ClothSimulator/blob/main/src/main.cpp
 rope game
-snake
 MS paint tool
-NOSnake (snake with slow-motion)
+rigid body simulation (rotating rectangles and circles)
+game of life
+more complex sand/powder game
+3D ray marching
+Chess
+Igo
+Simple platformer
+Tetris
+bow and arrow cat
+
+Improvements for particle simulation:
+Add a partitioning algorithm
+Add collision
+
+Improvements for raycaster:
+Draw sprite in one draw call
+More generic ray tracing function
+Path finding for enemy sprites
+bullet collision
+health for players and enemies
+pick up keys and weapons
+death animations for enemies
+floor casting and fixed sky box
+Use linear intersection geometry for diagonal walls
 
 FFmpeg
 Use OpenGL directly (glfw library)
